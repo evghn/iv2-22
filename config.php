@@ -11,6 +11,6 @@ $signin = isset($_GET['sign-in']);
 $error = isset($_GET['error']) 
     ? $_GET['error']
     : null;
-
-var_dump($auth, $reg, $signin, $_GET, $error);
+$token = $auth ? $_GET['token'] : null;
+// var_dump($auth, $reg, $signin, $_GET, $error);
 

@@ -4,9 +4,15 @@ require_once 'function.php';
 
     // register
 if (isset($_GET['send'])) { 
-    $register();
+    $result = $register();
 
-    header('Location: ' . SCRIPT_FILE);
+    header('Location: ' 
+        . SCRIPT_FILE 
+        . ($result 
+            ? '?' . $result
+            : ''
+        ) 
+    );
     exit;
 }
 
@@ -14,3 +20,12 @@ if (isset($_GET['signin'])) {
     $signin();
     exit;
 }
+
+
+if (isset($_GET['logout'])) {
+    $logout();
+    exit;
+}
+
+
+

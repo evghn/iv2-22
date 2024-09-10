@@ -11,6 +11,7 @@
         } 
     };
 
+
     $addUser = fn(array &$data, string $login, string $password) => 
         $data[$login] = [
             'password' => password_hash($password, PASSWORD_BCRYPT),
@@ -22,15 +23,24 @@
     $register = function() use ($addUser, $file_write, $file_load) {
         $login = $_GET['login'];
         $password = $_GET['password'];
-
+        $result = null;        
         if ($login && $password) {
             if ($data = $file_load()) {
-                
+                if (! isset($data[$login])) {
+                    //user not exist
+                    $addUser($data, $login, $password);
+                    $file_write($data); 
+                } else {
+                    //user exist
+                    $result = "error=user: $login is exist";
+                }
             } else {
                 $addUser($data, $login, $password);
                 $file_write($data);
             }
         }
+
+        return $result;
     };
 
 
@@ -50,3 +60,14 @@
 
         header('Location: ' . SCRIPT_FILE . '?' . $url_data);        
     };
+
+    $logout = function($token) use($file_load) {
+        if ($token && ($data = $file_load())) {
+            if ($user = array_filter($data, function($val) use($token) {
+                return $val['token'] == $token;   
+            })) {
+                
+            }
+        }
+    };
+

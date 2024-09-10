@@ -35,6 +35,9 @@
                     </label>
                 </div>
             <?php endif ?>
+            <?php if ($auth): ?>
+                <input type="hidden" name='token' value="<?= $token ?>">
+            <?php endif ?>
             <div>
                 <?php 
                     if ($auth) {
