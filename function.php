@@ -44,21 +44,18 @@
     };
 
 
-    $signin = function() use($file_load) {
-        $login = $_GET['login'];
-        $password = $_GET['password'];
-        $url_data = 'error=user not found';
-
+    $signin = function($login, $password) use($file_load) {        
+        $result = 'error=user not found';        
         if ($login && $password) {
             if (($data = $file_load()) && isset($data[$login])) {
                 $user = $data[$login];
                 if (password_verify($password, $user['password'])) {
-                   $url_data = 'token=' . $user['token'];
+                   $result = 'token=' . $user['token'];
                 }
             }
         }
 
-        header('Location: ' . SCRIPT_FILE . '?' . $url_data);        
+        return $result;
     };
 
     $logout = function($token) use($file_load) {
