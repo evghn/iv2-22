@@ -3,68 +3,104 @@
     $file_write = fn(string|array $data) => file_put_contents(FILE_DB, json_encode($data));
     
     $file_load = function() use ($file_write): array {
+        $data = [];
         if (file_exists(FILE_DB)) {
-            return json_decode(file_get_contents(FILE_DB), true);
+            if ($fileData = file_get_contents(FILE_DB)) {
+                $data = json_decode($fileData, true);
+            }            
         } else {            
-            $file_write([]);
-            return [];
-        } 
+            $file_write($data);            
+        }
+        
+        return $data;
+    };
+
+    $token_create = function(array $data) {
+        while (true) {
+            $token = bin2hex(random_bytes(25));
+            if (! array_filter($data, fn($val) => $val['token'] == $token)) {
+                break;
+            } 
+        }
+
+        return $token;
+    };
+
+    $add_user = fn(array &$data, string $login, string $password) => 
+        $data[$login] = [
+            'password' => password_hash($password, PASSWORD_BCRYPT),
+            'token' => null,
+            'expire' => null,            
+        ];
+    
+    $user_search = fn($data, $token) =>
+    array_filter($data, 
+        fn($val) => $val['token'] == $token
+    );
+
+
+    $user_update = function(string $login, array $user) use($file_load, $file_write) {
+        $result = false;
+        if ($data = $file_load()) {
+            $data[$login] = $user;            
+            $result = (bool)$file_write($data);
+        }
+        
+        return $result;
     };
 
 
-    $addUser = fn(array &$data, string $login, string $password) => 
-        $data[$login] = [
-            'password' => password_hash($password, PASSWORD_BCRYPT),
-            'token' => bin2hex(random_bytes(25)),
-            'expire' => time() + TIME_EXPIRE,
-        ];
-    
+    $sign_in = function(string $login, string $password) use($file_load, $user_update, $token_create) {        
+        $result = 'error=user not found';             
+        if ($login && $password) {           
+            if (($data = $file_load()) && isset($data[$login])) {
+                $user = $data[$login];                
+                if (password_verify($password, $user['password'])) {
+                    $user['token'] = $token_create($data);
+                    $user['expire'] = time() + TIME_EXPIRE;
+                    $user_update($login, $user);
+                    $result = 'token=' . $user['token'];                   
+                }
+            }
+        }
 
-    $register = function() use ($addUser, $file_write, $file_load) {
+        return $result;
+    };
+
+    
+    $register = function() use ($add_user, $file_write, $file_load, $sign_in) {
         $login = $_GET['login'];
         $password = $_GET['password'];
         $result = null;        
         if ($login && $password) {
             if ($data = $file_load()) {
-                if (! isset($data[$login])) {
-                    //user not exist
-                    $addUser($data, $login, $password);
-                    $file_write($data); 
-                } else {
+                if (isset($data[$login])) {
                     //user exist
                     $result = "error=user: $login is exist";
                 }
-            } else {
-                $addUser($data, $login, $password);
+            }
+            
+            if (! $result) {
+                $add_user($data, $login, $password);
                 $file_write($data);
+                $result = $sign_in($login, $password);
             }
         }
 
         return $result;
     };
+    
 
-
-    $signin = function($login, $password) use($file_load) {        
-        $result = 'error=user not found';        
-        if ($login && $password) {
-            if (($data = $file_load()) && isset($data[$login])) {
-                $user = $data[$login];
-                if (password_verify($password, $user['password'])) {
-                   $result = 'token=' . $user['token'];
-                }
-            }
-        }
-
-        return $result;
-    };
-
-    $logout = function($token) use($file_load) {
+    $logout = function(string $token) use($file_load, $user_update, $user_search) {
         if ($token && ($data = $file_load())) {
-            if ($user = array_filter($data, function($val) use($token) {
-                return $val['token'] == $token;   
-            })) {
-                
+            if ($user = $user_search($data, $token)) {
+                $login = array_keys($user)[0]; 
+                $user = [...$user[$login]];
+                $user['token'] = null;
+                $user['expire'] = null;
+                $user_update($login, $user);
             }
         }
-    };
 
+        return null;
+    };

@@ -66,8 +66,7 @@
     <?php endif ?>
     <div>
         <?= $error ?>
+        <?= $auth ? 'user: ' . $auth : '' ?>
     </div>
 </body>
 </html>
-
-
